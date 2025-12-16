@@ -1,0 +1,10 @@
+pandas
+numpy
+scikit-learn==1.7.2
+opencv-python-headless
+scikit-image
+fastapi
+uvicorn
+python-multipart
+joblib
+requests
