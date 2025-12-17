@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skin Lesion Analyzer</title>
+    <style>
+        :root {
+            --bg: #f4f4f9;
+            --card: #ffffff;
+            --text: #1f2933;
+            --muted: #52606d;
+            --accent: #2563eb;
+            --accent-soft: rgba(37, 99, 235, 0.1);
+            --border: #e5e7eb;
+            --shadow: 0 12px 35px rgba(0, 0, 0, 0.08);
+            --success: #16a34a;
+            --danger: #dc2626;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            padding: 32px 16px 48px;
+            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+            background: radial-gradient(circle at 20% 20%, rgba(37, 99, 235, 0.08), transparent 25%),
+                        radial-gradient(circle at 80% 0%, rgba(22, 163, 74, 0.08), transparent 20%),
+                        var(--bg);
+            color: var(--text);
+        }
+
+        .page {
+            max-width: 960px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 32px;
+            letter-spacing: -0.02em;
+        }
+
+        header p {
+            margin: 8px 0 0;
+            color: var(--muted);
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            padding: 24px;
+        }
+
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .step {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+            background: var(--accent-soft);
+            color: var(--text);
+            font-size: 14px;
+        }
+
+        .uploader {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            transition: border-color 0.2s ease, background 0.2s ease;
+        }
+
+        .uploader:hover { border-color: var(--accent); background: rgba(37, 99, 235, 0.03); }
+
+        .upload-btn-wrapper { position: relative; display: inline-block; }
+
+        .btn {
+            border: 1px solid var(--accent);
+            color: #ffffff;
+            background: var(--accent);
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.1s ease, box-shadow 0.2s ease;
+            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.2);
+        }
+
+        .btn:hover { transform: translateY(-1px); }
+        .btn:active { transform: translateY(0); }
+
+        .upload-btn-wrapper input[type=file] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            height: 100%;
+            width: 100%;
+            cursor: pointer;
+        }
+
+        #preview {
+            max-width: 320px;
+            width: 100%;
+            margin: 16px auto 0;
+            border-radius: 12px;
+            display: none;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+        }
+
+        #result {
+            margin-top: 18px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .tag.danger { background: rgba(220, 38, 38, 0.1); color: var(--danger); }
+        .tag.success { background: rgba(22, 163, 74, 0.12); color: var(--success); }
+        .tag.primary { background: rgba(37, 99, 235, 0.12); color: var(--accent); }
+
+        .muted { color: var(--muted); font-weight: 500; }
+
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 10px;
+            background: #f3f4f6;
+            color: var(--muted);
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 3px solid rgba(37, 99, 235, 0.15);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .error {
+            color: var(--danger);
+            font-weight: 600;
+            margin-top: 12px;
+        }
+
+        footer {
+            margin-top: 24px;
+            text-align: center;
+            color: var(--muted);
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <header>
+            <h1>🩺 Skin Lesion Analyzer</h1>
+            <p>Upload a dermoscopic image to run the on-device AI classifier.</p>
+        </header>
+
+        <div class="card">
+            <div class="steps">
+                <div class="step">1) Choose a dermoscopic image (PNG/JPG).</div>
+                <div class="step">2) The app extracts features and sends them to the model.</div>
+                <div class="step">3) View the predicted class and confidence.</div>
+            </div>
+
+            <div class="uploader">
+                <div class="upload-btn-wrapper">
+                    <button class="btn" id="uploadBtn">Select image</button>
+                    <input type="file" id="fileInput" accept="image/*" aria-label="Upload dermoscopic image">
+                </div>
+                <div class="muted" style="margin-top: 8px;">Supported: JPG, JPEG, PNG. Max ~10MB recommended.</div>
+
+                <img id="preview" alt="Image preview">
+                <div class="status" id="status" style="display:none;">
+                    <div class="spinner" aria-hidden="true"></div>
+                    <span>Analyzing...</span>
+                </div>
+                <div id="result"></div>
+                <div class="error" id="error"></div>
+            </div>
+        </div>
+
+        <footer>
+            Predictions are for research use. Consult a dermatologist for medical decisions.
+        </footer>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const preview = document.getElementById('preview');
+        const resultDiv = document.getElementById('result');
+        const statusDiv = document.getElementById('status');
+        const errorDiv = document.getElementById('error');
+        const uploadBtn = document.getElementById('uploadBtn');
+
+        const CLASS_LABELS = {
+            akiec: "Actinic keratoses / Bowen's disease",
+            bcc: "Basal cell carcinoma",
+            bkl: "Benign keratosis-like lesions",
+            df: "Dermatofibroma",
+            mel: "Melanoma",
+            nv: "Melanocytic nevus (mole)",
+            vasc: "Vascular lesion",
+        };
+
+        const CANCER_CODES = new Set(["akiec", "bcc", "mel"]);
+
+        fileInput.addEventListener('change', () => {
+            const file = fileInput.files?.[0];
+            if (!file) return;
+
+            clearOutputs();
+            const objectUrl = URL.createObjectURL(file);
+            preview.src = objectUrl;
+            preview.style.display = 'block';
+
+            analyze(file);
+        });
+
+        function clearOutputs() {
+            resultDiv.innerHTML = '';
+            errorDiv.textContent = '';
+            statusDiv.style.display = 'none';
+        }
+
+        async function analyze(file) {
+            statusDiv.style.display = 'inline-flex';
+            uploadBtn.disabled = true;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch(`${window.location.origin}/predict/image`, {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    const text = await response.text();
+                    throw new Error(text || 'Prediction failed');
+                }
+
+                const data = await response.json();
+                const rawCode = (data.class_name ?? "").trim();
+                const code = rawCode.toLowerCase();
+                const pretty = CLASS_LABELS[code] || rawCode || "Unknown";
+                const isCancer = CANCER_CODES.has(code);
+                const statusLabel = isCancer ? "Cancer" : "Non-cancer";
+                const statusClass = isCancer ? "danger" : "success";
+                const confidence = data.confidence != null ? (data.confidence * 100).toFixed(2) : "N/A";
+                const codeSuffix = rawCode && pretty.toLowerCase() !== rawCode.toLowerCase() ? ` (${rawCode})` : "";
+
+                resultDiv.innerHTML = `
+                    <div class="tag ${statusClass}">${statusLabel}</div>
+                    <div class="muted" style="margin-top:6px;">Diagnosis: <span class="tag primary">${pretty}${codeSuffix}</span></div>
+                    <div class="muted" style="margin-top:6px;">Confidence: ${confidence}%</div>
+                `;
+            } catch (err) {
+                console.error(err);
+                errorDiv.textContent = 'Error analyzing image. Please try another image or retry in a moment.';
+            } finally {
+                statusDiv.style.display = 'none';
+                uploadBtn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import logging
 from contextlib import asynccontextmanager
 from typing import Any, Dict, Optional
 
 import numpy as np
 from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, conlist
 
 from . import utils
@@ -22,15 +25,23 @@ metadata: Dict[str, Any] = {}
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global model, scaler, encoder, metadata
+    # Initialize logging
+    utils.setup_logger()
+    logger = logging.getLogger(__name__)
+    logger.info("Starting application and loading model artifacts...")
+    
     artifacts = utils.load_artifacts()
     model = artifacts["model"]
     scaler = artifacts["scaler"]
     encoder = artifacts["encoder"]
     metadata = artifacts["metadata"]
+    logger.info("Model artifacts loaded successfully")
     yield
+    logger.info("Shutting down application...")
 
 
 app = FastAPI(title="Skin Cancer API", version="1.0.0", lifespan=lifespan)
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 
 class FeaturesInput(BaseModel):
@@ -66,21 +77,44 @@ def _predict_from_features(features: np.ndarray) -> Dict[str, Any]:
 
 
 @app.get("/")
-async def root() -> Dict[str, str]:
-    return {"message": "Skin Cancer API is running"}
+async def root() -> FileResponse:
+    return FileResponse("app/static/index.html")
 
 
 @app.post("/predict/image")
 async def predict_image(file: UploadFile = File(...)) -> Dict[str, Any]:
-    raw_bytes = await file.read()
-    features = utils.extract_features_from_bytes(raw_bytes)
-    if features is None:
-        raise HTTPException(status_code=400, detail="Invalid or unreadable image")
+    logger = logging.getLogger(__name__)
+    logger.info("Received image prediction request")
+    
+    try:
+        raw_bytes = await file.read()
+        features = utils.extract_features_from_bytes(raw_bytes)
+        if features is None:
+            logger.warning("Invalid or unreadable image received")
+            raise HTTPException(status_code=400, detail="Invalid or unreadable image")
 
-    return _predict_from_features(features)
+        result = _predict_from_features(features)
+        logger.info(f"Prediction success: {result['class_name']} with confidence {result['confidence']}")
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Prediction failed: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error during prediction")
 
 
 @app.post("/predict/features")
 async def predict_features(payload: FeaturesInput) -> Dict[str, Any]:
-    features_array = np.array(payload.features, dtype=float)
-    return _predict_from_features(features_array)
+    logger = logging.getLogger(__name__)
+    logger.info("Received features prediction request")
+    
+    try:
+        features_array = np.array(payload.features, dtype=float)
+        result = _predict_from_features(features_array)
+        logger.info(f"Prediction success: {result['class_name']} with confidence {result['confidence']}")
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Prediction failed: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error during prediction")

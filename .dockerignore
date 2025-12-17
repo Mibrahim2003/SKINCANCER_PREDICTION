@@ -1,0 +1,21 @@
+# Data (Crucial: Do not include the 3GB dataset)
+data/
+HAM10000_images_part_1/
+HAM10000_images_part_2/
+
+# Python/System Cache
+__pycache__/
+*.pyc
+.pytest_cache/
+venv/
+.venv/
+.env
+
+# Git
+.git/
+.gitignore
+
+# Reports & Notebooks
+reports/
+notebooks/
+*.ipynb

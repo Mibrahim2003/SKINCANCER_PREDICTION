@@ -1,10 +1,16 @@
 pandas
 numpy
 scikit-learn==1.7.2
-opencv-python-headless
 scikit-image
+opencv-python-headless
+joblib
+matplotlib
+seaborn
 fastapi
 uvicorn
 python-multipart
 joblib
 requests
+prefect>=2.0
+prefect-discord
+deepchecks

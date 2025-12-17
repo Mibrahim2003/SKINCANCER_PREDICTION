@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import csv
+import logging
+import logging.handlers
 import os
+from datetime import datetime
 from typing import Any, Dict, Optional, Union
 
 import cv2
@@ -11,6 +15,83 @@ import numpy as np
 from skimage.feature import graycomatrix, graycoprops
 
 PathOrArray = Union[str, os.PathLike, np.ndarray]
+
+
+def setup_logger() -> None:
+    """Configure rotating file handler and console logging for the application."""
+    # Create logs directory if it doesn't exist
+    logs_dir = "logs"
+    os.makedirs(logs_dir, exist_ok=True)
+    
+    # Define log format
+    log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    formatter = logging.Formatter(log_format)
+    
+    # Set up rotating file handler (10MB max size, 5 backup files)
+    file_handler = logging.handlers.RotatingFileHandler(
+        os.path.join(logs_dir, "api.log"),
+        maxBytes=10 * 1024 * 1024,  # 10MB
+        backupCount=5
+    )
+    file_handler.setFormatter(formatter)
+    
+    # Set up console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    
+    # Configure root logger
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    root_logger.addHandler(file_handler)
+    root_logger.addHandler(console_handler)
+
+
+def log_experiment_result(
+    model_name: str,
+    params: str,
+    metrics: Dict[str, float],
+    report_path: str = "reports/experiments.csv"
+) -> None:
+    """Log ML experiment results to a CSV file for tracking and comparison.
+    
+    Args:
+        model_name: Name of the model (e.g., 'RandomForest', 'SVM')
+        params: String describing model parameters (e.g., 'n_estimators=200, max_depth=20')
+        metrics: Dictionary containing metrics like accuracy, f1_score, recall_melanoma
+        report_path: Path to the CSV file where experiments are logged
+    """
+    # Ensure reports directory exists
+    os.makedirs(os.path.dirname(report_path), exist_ok=True)
+    
+    # Check if file exists to determine if we need to write headers
+    file_exists = os.path.isfile(report_path)
+    
+    # Get current timestamp
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    # Prepare the row data
+    row_data = {
+        "Timestamp": timestamp,
+        "Model_Name": model_name,
+        "Parameters": params,
+        "Accuracy": metrics.get("accuracy", 0.0),
+        "F1_Score": metrics.get("f1_score", 0.0),
+        "Recall_Melanoma": metrics.get("recall_melanoma", 0.0),
+    }
+    
+    # Write to CSV
+    with open(report_path, "a", newline="", encoding="utf-8") as csvfile:
+        fieldnames = ["Timestamp", "Model_Name", "Parameters", "Accuracy", "F1_Score", "Recall_Melanoma"]
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        
+        # Write header if file is new
+        if not file_exists:
+            writer.writeheader()
+        
+        # Write the experiment data
+        writer.writerow(row_data)
+    
+    logging.getLogger(__name__).info(f"Experiment logged: {model_name} - Accuracy: {row_data['Accuracy']:.4f}")
 
 
 def load_artifacts(models_dir: str = "models") -> Dict[str, Any]:
@@ -93,6 +174,8 @@ def extract_features_from_bytes(image_bytes: bytes, img_size: tuple[int, int] = 
 
 
 __all__ = [
+    "setup_logger",
+    "log_experiment_result",
     "load_artifacts",
     "extract_advanced_features",
     "preprocess_image",
